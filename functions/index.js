@@ -64,12 +64,12 @@ exports.addUser = functions.https.onRequest((req, res) => {
 
 exports.ReceiveProduct = functions.https.onRequest((req, res) => {
 
-    if (!req.body.Name || !req.body.Amount) {
+    if (!req.body.Name || !req.body.Amount || !req.body.SiteId) {
         res.status(422).json({ "error": " Missing information Select amount or product" })
     }
     else {
 
-        const Materials = db.collection(`Sites/xxx/Stock`)
+        const Materials = db.collection(`Sites/${req.body.SiteId}/Stock`)
 
         const Material = Materials.filter
 
@@ -77,7 +77,7 @@ exports.ReceiveProduct = functions.https.onRequest((req, res) => {
 
         let transaction = db.runTransaction(t => {
 
-            let stockRef = db.collection(`Sites/ddd/Stock/`);
+            let stockRef = db.collection(`Sites/${req.body.SiteId}/Stock/`);
             let Stock = stockRef.where("", "==", "")
                 .get()
                 .then(snapshot => {
@@ -93,7 +93,7 @@ exports.ReceiveProduct = functions.https.onRequest((req, res) => {
                 ).then(item => {
                     //Update the Stock
                     let increment = admin.firestore.FieldValue.increment(req.body.Amount)
-                    let itemRef = db.collection(`Sites/ddd/Stock`).doc(item.id);
+                    let itemRef = db.collection(`Sites/RiyRYuCMekkA3QONRX3i/Stock`).doc(item.id);
                     itemRef.update({ "Amount": increment })
                 })
         })
@@ -107,27 +107,24 @@ exports.ReceiveProduct = functions.https.onRequest((req, res) => {
 
 exports.DisburseProduct = functions.https.onRequest((req, res) => {
 
-    if (!req.body.Name || !req.body.Amount) {
+    if (!req.body.Name || !req.body.Amount || !req.body.SiteId) {
         res.status(422).json({ "error": " Missing information Select amount or product" })
     }
     else {
 
-        const Materials = db.collection(`Sites/xxx/Stock`)
+        const Materials = db.collection(`Sites/${req.body.SiteId}/Stock`)
 
         const Material = Materials.filter
 
-
-
-
         let transaction = db.runTransaction(t => {
 
-            let stockRef = db.collection(`Sites/ddd/Stock/`);
+            let stockRef = db.collection(`Sites/${req.body.SiteId}/Stock/`);
             let Stock = stockRef.where("", "==", "")
                 .get()
                 .then(snapshot => {
                     if (snapshot.empty) {
                         console.log('No matching documents.');
-                        return;
+                        return null;
                     }
                     snapshot.forEach(doc => {
                         console.log(doc.id, '=>', doc.data());
@@ -146,3 +143,19 @@ exports.DisburseProduct = functions.https.onRequest((req, res) => {
 
     }
 })
+
+exports.ProductsInStore = functions.https.onRequest(
+    (req, res) => {
+        if (!req.SiteId) {
+            res.status(422).json({ "error": " Missing Store Id" })
+        } else {
+            const Store = db.collection(`Sites/${req.body.SiteId}/Stock`)
+
+            Store.get().then(
+
+            ).catch(
+                error => res.status(500).send({ error: error })
+            )
+        }
+    }
+)
