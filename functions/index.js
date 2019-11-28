@@ -11,7 +11,7 @@ exports.addProject = functions.https.onRequest((request, response) => {
 
 exports.addUser = functions.https.onRequest((req, res) => {
 
-    if (!req.body.email || !req.body.name || !req.body.password || !req.body.role || !req.body.projectId) {
+    if (!req.body.email || !req.body.phoneNumber || !req.body.name || !req.body.password || !req.body.role || !req.body.projectId) {
         console.log(JSON.stringify(req.body))
         res.status(422).send({ error: true, message: "Missing Something" })
 
@@ -26,20 +26,30 @@ exports.addUser = functions.https.onRequest((req, res) => {
             password: user.password,
             displayName: user.username,
         }).then(
-            function (userReord) {
-                console.log(userReord)
-            }
-        ).catch(
-            function (error) {
-                console.log(error)
+            (userRecord) => {
+                return admin.auth().setCustomUserClaims(userRecord.uid, {
+                    admin: user.role,
+                    projectId: user.projectId
+                })
             }
         )
+            .then(
+                result => res.send(result)
+            ).
+            catch(
+                (error) => {
+                    console.log(error)
+                    res.send(error)
+                }
+            )
 
 
         /*.then((userReord) => {
             console.log(`User record`)
             console.log(JSON.stringify(userReord))
-            return admin.auth().setCustomUserClaims(userReord.uid, { admin: user.role, projectId: user.projectId })
+            return admin.auth().setCustomUserClaims(userReord.uid, { 
+                admin: user.role, 
+                projectId: user.projectId })
 
 
 
@@ -81,6 +91,7 @@ exports.ReceiveProduct = functions.https.onRequest((req, res) => {
             let Stock = stockRef.where("", "==", "")
                 .get()
                 .then(snapshot => {
+                    // eslint-disable-next-line promise/always-return
                     if (snapshot.empty) {
                         console.log('No matching documents.');
                         return;
@@ -90,6 +101,7 @@ exports.ReceiveProduct = functions.https.onRequest((req, res) => {
                     });
                 }
 
+                    // eslint-disable-next-line promise/always-return
                 ).then(item => {
                     //Update the Stock
                     let increment = admin.firestore.FieldValue.increment(req.body.Amount)
@@ -122,15 +134,17 @@ exports.DisburseProduct = functions.https.onRequest((req, res) => {
             let Stock = stockRef.where("", "==", "")
                 .get()
                 .then(snapshot => {
+                    // eslint-disable-next-line promise/always-return
                     if (snapshot.empty) {
-                        console.log('No matching documents.');
-                        return null;
+                        //console.log('No matching documents.');
+                        throw new Error('Snapshot empty')
                     }
                     snapshot.forEach(doc => {
                         console.log(doc.id, '=>', doc.data());
                     });
                 }
 
+                    // eslint-disable-next-line promise/always-return
                 ).then(item => {
                     //Update the Stock
                     let increment = admin.firestore.FieldValue.increment(-req.body.Amount)
@@ -151,11 +165,8 @@ exports.ProductsInStore = functions.https.onRequest(
         } else {
             const Store = db.collection(`Sites/${req.body.SiteId}/Stock`)
 
-            Store.get().then(
-
-            ).catch(
-                error => res.status(500).send({ error: error })
-            )
+            Store.get().then(products => res.status(200).send({ products: products }))
+                .catch(error => res.status(500).send({ error: error }))
         }
     }
 )
